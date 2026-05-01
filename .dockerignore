@@ -1,0 +1,9 @@
+node_modules
+client/node_modules
+server/node_modules
+client/.vite
+client/dist
+.env
+.git
+.gitignore
+*.md
