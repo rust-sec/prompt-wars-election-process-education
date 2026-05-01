@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 // ── Gemini proxy endpoint ──────────────────────────────────────────────────
@@ -44,10 +44,14 @@ app.post('/api/generate', async (req, res) => {
       const errText = await geminiRes.text();
       console.error(`Gemini API error (${geminiRes.status}):`, errText);
 
-      // Auto-retry once on rate limit (429)
-      if (geminiRes.status === 429 && retryCount < 1) {
-        console.log('Rate limited — retrying in 3s...');
-        await new Promise((r) => setTimeout(r, 3000));
+      // Auto-retry with exponential backoff on rate limit (429) or server error (5xx)
+      if ((geminiRes.status === 429 || geminiRes.status >= 500) && retryCount < 3) {
+        const baseDelay = Math.pow(2, retryCount) * 2000;
+        const jitter = Math.random() * 1000;
+        const delay = baseDelay + jitter;
+        
+        console.log(`Rate limited or server error — retrying in ${Math.round(delay)}ms (Attempt ${retryCount + 1}/3)...`);
+        await new Promise((r) => setTimeout(r, delay));
         return makeRequest(retryCount + 1);
       }
 

@@ -4,7 +4,8 @@
  */
 export async function callGemini(prompt, systemInstruction = '', history = []) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  // Increased timeout to 60s to allow backend retry logic to complete on rate limits
+  const timeout = setTimeout(() => controller.abort(), 60000);
 
   try {
     const response = await fetch('/api/generate', {
